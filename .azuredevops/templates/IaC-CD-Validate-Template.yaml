@@ -1,0 +1,17 @@
+parameters:
+  environmentName: ''
+  path: ''
+
+jobs:
+  - job:
+    displayName: Validate Terraform
+    steps:
+      - task: PowerShell@2
+        displayName: Verify Terraform Sources
+        inputs:
+          filePath: src/tf.ps1
+          arguments: -Force -DownloadTerraform -Validate -TargetPath ${{ parameters.path }}
+      - bash: 'git clean -fdx'
+        displayName: Minimize Published Package
+      - publish: $(System.DefaultWorkingDirectory)
+        artifact: terraform-validate-${{ parameters.environmentName }}

@@ -1,0 +1,46 @@
+parameters:
+- name: 'prefix'
+  type: string
+  default: ''
+- name: 'azureServiceConnectionName'
+  type: string
+  default: ''
+- name: 'environmentName'
+  type: string
+  default: ''
+- name: 'path'
+  type: string
+  default: ''
+- name: 'varFile'
+  type: string
+  default: ''
+- name: 'publishOutput'
+  type: boolean
+  default: false
+- name: 'utilResourceGroupName'
+  type: string
+  default: ''
+
+jobs:
+  - job: tf_output_${{ parameters.environmentName }}
+    displayName: Output Terraform
+    condition: eq('${{ parameters.publishOutput }}', true)
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+      - task: DownloadPipelineArtifact@2
+        displayName: Download CI Artifact
+        inputs:
+          source: 'current'
+          artifactName: terraform-validate-${{ parameters.environmentName }}
+          targetPath: $(Pipeline.Workspace)/terraform-src
+      - task: AzureCLI@2
+        displayName: Terraform Output
+        inputs:
+          azureSubscription: ${{ parameters.azureServiceConnectionName }}
+          scriptType: pscore
+          scriptPath: $(Pipeline.Workspace)/terraform-src/src/tf.ps1
+          addSpnToEnvironment: true
+          arguments: -Output -Force -DownloadTerraform -Prefix "${{ parameters.prefix }}" -EnvironmentName "${{ parameters.environmentName }}" -TargetPath "$(Pipeline.Workspace)/terraform-src/${{ parameters.path }}" -VarFile "$(Pipeline.Workspace)/terraform-src/${{ parameters.varFile }}" -UtilResourceGroupName "${{ parameters.utilResourceGroupName }}"
+      - publish: "$(Pipeline.Workspace)/terraform-src/${{ parameters.path }}/output.json"
+        artifact: terraform-output-${{ parameters.environmentName }}

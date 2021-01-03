@@ -1,0 +1,26 @@
+parameters:
+- name: 'prefix'
+  type: string
+  default: ''
+- name: 'azureServiceConnectionName'
+  type: string
+  default: ''
+- name: 'environmentName'
+  type: string
+  default: ''
+- name: 'utilResourceGroupName'
+  type: string
+  default: ''
+name: IaC-CD-dev $(Rev:.r) - $(Date:yyyy-MM-dd)
+pool:
+  vmImage: 'ubuntu-latest'
+stages:
+  - template: .azuredevops/templates/IaC-CD-Stages-Template.yaml
+    parameters:
+      prefix: '${{ parameters.prefix }}'
+      azureServiceConnectionName: '${{ parameters.azureServiceConnectionName }}'
+      environmentName: ${{ parameters.environmentName }}
+      path: 'src/01-iac'
+      varFile: 'src/01-iac/vars_dev_europe.tfvars'
+      publishOutput: true
+      utilResourceGroupName: '${{ parameters.utilResourceGroupName }}'

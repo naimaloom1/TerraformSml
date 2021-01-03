@@ -1,0 +1,76 @@
+parameters:
+- name: 'prefix'
+  type: string
+  default: ''
+- name: 'azureServiceConnectionName'
+  type: string
+  default: ''
+- name: 'environmentName'
+  type: string
+  default: ''
+- name: 'path'
+  type: string
+  default: ''
+- name: 'varFile'
+  type: string
+  default: ''
+- name: 'publishOutput'
+  type: boolean
+  default: false
+- name: 'utilResourceGroupName'
+  type: string
+  default: ''
+  
+stages:
+  - stage: check_params_${{ parameters.environmentName }}
+    displayName: Check Parameters (${{ parameters.environmentName }})
+    jobs:
+      - job: check_params_${{ parameters.environmentName }}
+        displayName: Check Parameters
+        steps:
+        - task: PowerShell@2
+          displayName: Check Pipeline Template Input Parameters
+          inputs:
+            filePath: .azuredevops/templates/Iac-CD-Check-Pipeline-Parameters.ps1
+            arguments: -azureServiceConnectionName '${{ parameters.azureServiceConnectionName }}' -environmentName '${{ parameters.environmentName }}' -prefix '${{ parameters.prefix }}' -path '${{ parameters.path }}' -varFile '${{ parameters.varFile }}'
+  - stage: validate_${{ parameters.environmentName }}
+    displayName: Validate (${{ parameters.environmentName }})
+    jobs:
+      - template: ./IaC-CD-Validate-Template.yaml
+        parameters:
+          environmentName: '${{ parameters.environmentName }}'
+          path: '${{ parameters.path }}'
+  - stage: plan_${{ parameters.environmentName }}
+    displayName: Plan (${{ parameters.environmentName }})
+    jobs:
+      - template: ./IaC-CD-Plan-Template.yaml
+        parameters:
+          prefix: '${{ parameters.prefix }}'
+          azureServiceConnectionName: '${{ parameters.azureServiceConnectionName }}'
+          environmentName: '${{ parameters.environmentName }}'
+          path: '${{ parameters.path }}'
+          varFile: '${{ parameters.varFile }}'
+          utilResourceGroupName: '${{ parameters.utilResourceGroupName }}'
+  - stage: apply_${{ parameters.environmentName }}
+    displayName: Apply (${{ parameters.environmentName }})
+    jobs:
+      - template: ./IaC-CD-Apply-Template.yaml
+        parameters:
+          prefix: '${{ parameters.prefix }}'
+          azureServiceConnectionName: '${{ parameters.azureServiceConnectionName }}'
+          environmentName: '${{ parameters.environmentName }}'
+          path: '${{ parameters.path }}'
+          varFile: '${{ parameters.varFile }}'
+          utilResourceGroupName: '${{ parameters.utilResourceGroupName }}'
+  - stage: output_${{ parameters.environmentName }}
+    displayName: Output (${{ parameters.environmentName }})
+    jobs:
+      - template: ./IaC-CD-Output-Template.yaml
+        parameters:
+          prefix: '${{ parameters.prefix }}'
+          azureServiceConnectionName: '${{ parameters.azureServiceConnectionName }}'
+          environmentName: '${{ parameters.environmentName }}'
+          path: '${{ parameters.path }}'
+          varFile: '${{ parameters.varFile }}'
+          publishOutput: '${{ parameters.publishOutput }}'
+          utilResourceGroupName: '${{ parameters.utilResourceGroupName }}'

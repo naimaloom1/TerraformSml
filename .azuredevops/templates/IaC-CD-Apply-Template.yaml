@@ -1,0 +1,50 @@
+parameters:
+- name: 'prefix'
+  type: string
+  default: ''
+- name: 'azureServiceConnectionName'
+  type: string
+  default: ''
+- name: 'environmentName'
+  type: string
+  default: ''
+- name: 'path'
+  type: string
+  default: ''
+- name: 'varFile'
+  type: string
+  default: ''
+- name: 'utilResourceGroupName'
+  type: string
+  default: ''
+
+jobs:
+  - deployment: tf_deploy_${{ parameters.environmentName }}
+    displayName: Apply Terraform
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: ${{ parameters.environmentName }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            displayName: Download Validation Artifact
+            inputs:
+              source: 'current'
+              artifactName: terraform-validate-${{ parameters.environmentName }}
+              targetPath: $(Pipeline.Workspace)/terraform-src
+          - task: DownloadPipelineArtifact@2
+            displayName: Download Plan Artifact
+            inputs:
+              source: 'current'
+              artifactName: terraform-plan-${{ parameters.environmentName }}
+              targetPath: $(Pipeline.Workspace)/terraform-src/${{ parameters.path }}/
+          - task: AzureCLI@2
+            displayName: Terraform Apply
+            inputs:
+              azureSubscription: ${{ parameters.azureServiceConnectionName }}
+              scriptType: pscore
+              scriptPath: $(Pipeline.Workspace)/terraform-src/src/tf.ps1
+              addSpnToEnvironment: true
+              arguments: -Apply -UseExistingTerraformPlan -Force -DownloadTerraform -Prefix "${{ parameters.prefix }}" -EnvironmentName "${{ parameters.environmentName }}" -TargetPath "$(Pipeline.Workspace)/terraform-src/${{ parameters.path }}" -VarFile "$(Pipeline.Workspace)/terraform-src/${{ parameters.varFile }}" -UtilResourceGroupName "${{ parameters.utilResourceGroupName }}"

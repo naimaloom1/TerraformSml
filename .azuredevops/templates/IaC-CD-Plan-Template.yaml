@@ -1,0 +1,42 @@
+parameters:
+- name: 'prefix'
+  type: string
+  default: ''
+- name: 'azureServiceConnectionName'
+  type: string
+  default: ''
+- name: 'environmentName'
+  type: string
+  default: ''
+- name: 'path'
+  type: string
+  default: ''
+- name: 'varFile'
+  type: string
+  default: ''
+- name: 'utilResourceGroupName'
+  type: string
+  default: ''
+
+jobs:
+  - job: tf_planing_${{ parameters.environmentName }}
+    displayName: Plan Terraform
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: Download CI Artifact
+      inputs:
+        source: 'current'
+        artifactName: terraform-validate-${{ parameters.environmentName }}
+        targetPath: $(Pipeline.Workspace)/terraform-src
+    - task: AzureCLI@2
+      displayName: Terraform Plan
+      inputs:
+        azureSubscription: ${{ parameters.azureServiceConnectionName }}
+        scriptType: pscore
+        scriptPath: $(Pipeline.Workspace)/terraform-src/src/tf.ps1
+        addSpnToEnvironment: true
+        arguments: -Plan -Force -DownloadTerraform -Prefix "${{ parameters.prefix }}" -EnvironmentName "${{ parameters.environmentName }}" -TargetPath "$(Pipeline.Workspace)/terraform-src/${{ parameters.path }}" -VarFile "$(Pipeline.Workspace)/terraform-src/${{ parameters.varFile }}" -UtilResourceGroupName "${{ parameters.utilResourceGroupName }}"
+    - publish: $(Pipeline.Workspace)/terraform-src/${{ parameters.path }}/terraform.tfplan
+      artifact: terraform-plan-${{ parameters.environmentName }}
